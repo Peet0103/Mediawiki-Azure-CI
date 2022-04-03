@@ -1,0 +1,178 @@
+{
+    "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+    "contentVersion": "1.0.0.0",
+    "parameters": {
+        "Image": { //Have users select an image
+            "type": "string",
+            "defaultValue": "dteck04/mediawiki-azure",
+            "metadata": {
+                "description": "Use the dockerhub image or enter your own registry"
+            }
+        },
+        "container-name": { //Have users fill in the name to use for the container instance
+            "type": "string",
+            "defaultValue": "wiki-env",
+            "metadata": {
+                "description": "Name to identify the container instance"
+            }
+        },
+        "DBHOST": { //Have users fill in the database url
+            "type": "string",
+            "defaultValue": "**.mysql.database.azure.com",
+            "metadata": {
+                "description": "URL for accessing the database"
+            }
+        },
+        "DBUSER": { //Have users fill in the database user name
+            "type": "string",
+            "metadata": {
+                "description": "User account to use for logging into the database"
+            }
+        },
+        "DBPASS": { //Have users fill in the database password for the given user account
+            "type": "string",
+            "metadata": {
+                "description": "Password for accessing the database"
+            }
+        },
+        "CPUs": { //Have users fill in the number of CPUs
+            "type": "string",
+            "defaultValue": "1",
+            "metadata": {
+                "description": "How many CPUs do you want attached to the container"
+            }
+        },
+        "RAM-GB": { //Have users fill in the amount of ram to attach in gigabytes
+            "type": "string",
+            "defaultValue": "1.5",
+            "metadata": {
+                "description": "How much ram do you want allocated to your container in gigabytes"
+            }
+        },
+        "storageAccount": { //Have users fill in the name for their storage account
+            "type": "string",
+            "defaultValue": "*The Name of your Storage Account*",
+            "metadata": {
+                "description": "Enter the name of your storage account"
+            }
+        },
+        "storageAccountKey": { //Have users fill in the name for their storage account key
+            "type": "string",
+            "defaultValue": "*Storage Account Key*",
+            "metadata": {
+                "description": "Enter your storage account key"
+            }
+        },
+        "Configuration-Fileshare-Name": { //Have users fill in the name for the config fileshare
+            "type": "string",
+            "defaultValue": "wikiconfig",
+            "metadata": {
+                "description": "This is the name of the Fileshare inside of your storage account created to hold your configuration file"
+            }
+        },
+        "Images-Fileshare-Name": { //Have users fill in the name for the name for the images fileshare
+            "type": "string",
+            "defaultValue": "images",
+            "metadata": {
+                "description": "This is the name of the Fileshare inside of your storage account created to save your images"
+            }
+        }
+
+        
+    },
+    "variables": {},
+    "resources": [
+        {
+            "type": "Microsoft.ContainerInstance/containerGroups",
+            "apiVersion": "2021-10-01",
+            "name": "[parameters('container-name')]",
+            "location": "[resourceGroup().location]",
+            "properties": {
+                "sku": "Standard",
+                "containers": [
+                    {
+                        "name": "[parameters('container-name')]",
+                        "properties": {
+                            "image": "[parameters('Image')]",
+                            "ports": [
+                                {
+                                    "protocol": "TCP",
+                                    "port": 80
+                                }
+                            ],
+                            "environmentVariables": [
+                                {
+                                    "name": "FQDN",
+                                    "value": "[concat('http://',parameters('container-name'),'.',resourceGroup().location,'.azurecontainer.io/')]"
+                                },
+                                {
+                                    "name": "DBHOST",
+                                    "value": "[parameters('DBHOST')]"
+                                },
+                                {
+                                    "name": "DBUSER",
+                                    "secureValue": "[parameters('DBUSER')]"
+                                },
+                                {
+                                    "name": "DBPASS",
+                                    "secureValue": "[parameters('DBPASS')]"
+                                }
+                            ],
+                            "resources": {
+                                "requests": {
+                                    "memoryInGB": "[parameters('RAM-GB')]",
+                                    "cpu": "[parameters('CPUs')]"
+                                }
+                            },
+                            "volumeMounts": [
+                                {
+                                    "mountPath": "/var/www/html/LocalSettingsLink",
+                                    "name": "config"
+                                },
+                                {
+                                    "mountPath": "/var/www/html/imagesLink",
+                                    "name": "imagelinking"
+                                }
+                            ]
+                        }
+                    }
+                ],
+                "initContainers": [],
+                "imageRegistryCredentials": [],
+                "restartPolicy": "OnFailure",
+                "ipAddress": {
+                    "ports": [
+                        {
+                            "protocol": "TCP",
+                            "port": 80
+                        }
+                    ],
+                    "type": "Public",
+                    "dnsNameLabel": "[parameters('container-name')]"
+                },
+                "osType": "Linux",
+            //create volume as resource
+                "volumes": [
+                    {
+                        "name": "config",
+                        "azureFile": {
+                            "readOnly": "[bool('false')]",
+                            "shareName": "[parameters('Configuration-Fileshare-Name')]",
+                            "storageAccountKey": "[parameters('storageAccountKey')]",
+                            "storageAccountName": "[parameters('storageAccount')]"
+                        }
+                    },
+                    {
+                        "name": "imagelinking",
+                        "azureFile": {
+                            "readOnly": "[bool('false')]",
+                            "shareName": "[parameters('Images-Fileshare-Name')]",
+                            "storageAccountKey": "[parameters('storageAccountKey')]",
+                            "storageAccountName": "[parameters('storageAccount')]"
+                        }
+                    }
+                ]
+            }
+        }
+    ]
+}

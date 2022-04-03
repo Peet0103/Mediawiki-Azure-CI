@@ -1,0 +1,136 @@
+{
+    "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+    "contentVersion": "1.0.0.0",
+    "parameters": {
+        "StorageAccount-Name": {
+            "type": "string",
+            "minLength": 2,
+            "metadata": {
+                "description": "Only Lower case letters allowed. must be globally unique. A unique string will be appended"
+            }
+        },
+        "Storage-Sku": {
+            "type": "string",
+            "defaultValue": "Standard_LRS",
+            "allowedValues": ["Premium_LRS", "Premium_ZRS", "Standard_GRS", "Standard_GZRS", "Standard_LRS", "Standard_RAGRS", "Standard_RAGZRS", "Standard_ZRS"],
+            "metadata": {
+                "description": "SKU sets I/O limits and redundancy levels, LRS=Local, ZRS=Zone, GRS=Geographic, GZRS=Geo-zone, RAGRS=Read Access Geo"
+            }
+        },
+        "Configuration-Share-Name": {
+            "type": "string",
+            "minLength": 2,
+            "metadata": {
+                "description": "Name of the fileshare to hold your configuration files"
+            }
+        },
+        "Images-Share-Name": {
+            "type": "string",
+            "minLength": 2,
+            "metadata": {
+                "description": "Name of the fileshare to hold uplaoded graphics files"
+            }
+        },
+        "Service-tier": {
+            "type": "string",
+            "defaultValue": "Hot",
+            "allowedValues": [ "Cool", "Hot", "TransactionOptimized", "Premium" ],
+            "metadata": {
+                "description": "Prmium-low latency SSD, Transaction-HDD with high workload, Hot-HDD general purpose, Cool-HDD low access low bandwidth"
+            }
+        },
+        "Fileshare-max-size-GB": {
+            "type": "int",
+            "defaultValue": 5120,
+            "metadata": {
+                "description": "Maximum size of the fileshare, default is 5TB"
+            }
+        }
+    },
+    "variables": {
+        //Helps to create a globally unique name for the DB
+        "StorageAccountUniqueName": "[concat(parameters('StorageAccount-Name'), uniqueString(subscription().id, resourceGroup().id))]"
+    },
+    "resources": [
+        {
+            "type": "Microsoft.Storage/storageAccounts",
+            "apiVersion": "2021-08-01",
+            "name": "[variables('StorageAccountUniqueName')]",
+            "location": "[resourceGroup().location]",
+            "sku": {
+                "name": "[parameters('Storage-Sku')]"
+            },
+            "kind": "StorageV2",
+            "properties": {
+                "defaultToOAuthAuthentication": false,
+                "minimumTlsVersion": "TLS1_0",
+                "allowBlobPublicAccess": true,
+                "allowSharedKeyAccess": true,
+                "networkAcls": {
+                    "bypass": "AzureServices",
+                    "virtualNetworkRules": [],
+                    "ipRules": [],
+                    "defaultAction": "Allow"
+                },
+                "supportsHttpsTrafficOnly": false,
+                "encryption": {
+                    "services": {
+                        "file": {
+                            "keyType": "Account",
+                            "enabled": true
+                        }
+                    },
+                    "keySource": "Microsoft.Storage"
+                }
+            }
+        },
+
+        {
+            "type": "Microsoft.Storage/storageAccounts/fileServices",
+            "apiVersion": "2021-08-01",
+            "name": "[concat(variables('StorageAccountUniqueName'), '/default')]",
+            "dependsOn": [
+                "[resourceId('Microsoft.Storage/storageAccounts', variables('StorageAccountUniqueName'))]"
+            ],
+            "sku": {
+                "name": "[parameters('Storage-Sku')]"
+            },
+            "properties": {
+                "shareDeleteRetentionPolicy": {
+                    "enabled": true,
+                    "days": 7
+                }
+            }
+        },
+
+        {
+            "type": "Microsoft.Storage/storageAccounts/fileServices/shares",
+            "apiVersion": "2021-08-01",
+            "name": "[concat(variables('StorageAccountUniqueName'), '/default/',parameters('Images-Share-Name'))]",
+            "dependsOn": [
+                "[resourceId('Microsoft.Storage/storageAccounts/fileServices', variables('StorageAccountUniqueName'), 'default')]",
+                "[resourceId('Microsoft.Storage/storageAccounts', variables('StorageAccountUniqueName'))]"
+            ],
+            "properties": {
+                "accessTier": "[parameters('Service-tier')]",
+                "shareQuota": "[parameters('Fileshare-max-size-GB')]",
+                "enabledProtocols": "SMB"
+            }
+        },
+
+        {
+            "type": "Microsoft.Storage/storageAccounts/fileServices/shares",
+            "apiVersion": "2021-08-01",
+            "name": "[concat(variables('StorageAccountUniqueName'), '/default/',parameters('Configuration-Share-Name'))]",
+            "dependsOn": [
+                "[resourceId('Microsoft.Storage/storageAccounts/fileServices', variables('StorageAccountUniqueName'), 'default')]",
+                "[resourceId('Microsoft.Storage/storageAccounts', variables('StorageAccountUniqueName'))]"
+            ],
+            "properties": {
+                "accessTier": "[parameters('Service-tier')]",
+                "shareQuota": "[parameters('Fileshare-max-size-GB')]",
+                "enabledProtocols": "SMB"
+            }
+        }
+    ]
+}

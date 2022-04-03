@@ -1,0 +1,121 @@
+{
+    "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+    "contentVersion": "1.0.0.0",
+    "parameters": {
+        "DBHost-machine-type": {
+            "type": "string",
+            "defaultValue": "Standard_B1ms",
+            "metadata": {
+                "description": "https://docs.microsoft.com/en-us/azure/virtual-machines/sizes-general"
+            }
+        },
+
+        "DBHost-machine-tier": {
+            "type": "string",
+            "defaultValue": "Burstable",
+            "allowedValues": ["Burstable", "GeneralPurpose", "MemoryOptimized"],
+            "metadata": {
+                "description": "What service tier do you want for the underlying VM"
+        }
+        },
+
+        "vCores": {
+            "type": "int",
+            "defaultValue": 1,
+            "metadata": {
+                "description": "Number of CPU cores to attach to the virtual machine"
+        }
+        },
+
+        "input-output-speed": {
+            "type": "int",
+            "defaultValue": 360
+        },
+
+        "backupRetentionDays": {
+            "type": "int",
+            "defaultValue": 7
+        },
+
+        "Database-name-Prefix": { 
+            "type": "string",
+            "defaultValue": "wikidb",
+            "metadata": {
+                "description": "Names for databases need to be globally unique. A random string will be appended to this prefix"
+            }
+        },
+
+        "administratorUsername": {
+            "type": "string"
+        },
+
+        "administratorPassword": {
+            "type": "securestring"
+        }
+
+    },
+
+    "variables": {
+        //Helps to create a globally unique name for the DB
+        "sqlServerName": "[concat(parameters('Database-name-Prefix'), '-', uniqueString(subscription().id, resourceGroup().id))]"
+    },
+
+    "resources": [
+        {
+            "apiVersion": "2021-05-01",
+            "location": "[resourceGroup().location]",
+            "name": "[variables('sqlServerName')]",
+            "identity": "[json('null')]",
+            "properties": {
+                "version": "5.7",
+                "administratorLogin": "[parameters('administratorUsername')]",
+                "administratorLoginPassword": "[parameters('administratorPassword')]",
+                "minimalTlsVersion": "TLSEnforcementDisabled",
+                "sslEnforcement": "Disabled",
+                "publicNetworkAccess": "Enabled",
+                "Storage": {
+                    "StorageSizeGB": 20,
+                    "Iops": "[parameters('input-output-speed')]",
+                    "Autogrow": "Enabled"
+                },
+                "Backup": {
+                    "backupRetentionDays": "[parameters('backupRetentionDays')]"
+                },
+                "availabilityZone": 1
+            },
+            "sku": {
+                "name": "[parameters('DBHost-machine-type')]",
+                "tier": "[parameters('DBHost-machine-tier')]",
+                "capacity": "[parameters('vCores')]"
+            },
+            "type": "Microsoft.DBforMySQL/flexibleServers"
+        },
+
+        { //add firewall rule to allow all azure services to access the DB 
+            "type": "Microsoft.Resources/deployments",
+            "apiVersion": "2019-08-01",
+            "name": "AllowAzureServices",
+            "dependsOn": [
+                "[resourceId('Microsoft.DBforMySQL/flexibleServers/', concat(variables('sqlServerName')))]"
+            ],
+            "properties": {
+                "mode": "Incremental",
+                "template": {
+                    "$schema": "http://schema.management.azure.com/schemas/2014-04-01-preview/deploymentTemplate.json#",
+                    "contentVersion": "1.0.0.0",
+                    "resources": [
+                        {
+                            "type": "Microsoft.DBforMySQL/flexibleServers/firewallRules",
+                            "name": "[concat(variables('sqlServerName'),'/FireWallRules')]",
+                            "apiVersion": "2021-05-01",
+                            "properties": {
+                                "StartIpAddress": "0.0.0.0",
+                                "EndIpAddress": "0.0.0.0"
+                            }
+                        }
+                    ]
+                }
+            }
+        }
+    ]
+}

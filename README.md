@@ -30,4 +30,4 @@ I am using an Azure database for MySQL on a Flexible Server. <br>
 When using this you will need to set the server parameter <b>require_secure_transport</b> to <b>OFF</b> (it defaults to ON during deployment) <br>
 
 <b>System Diagram</b><br>
-<a href="https://storage.googleapis.com/public-image-share/wiki-system-diag.png"><img src="https://storage.googleapis.com/public-image-share/wiki-system-diag.png" width="700" height="300"></a>
+<a href="https://github.com/dteck/Mediawiki-Azure-CI/blob/main/Wiki_Container_Registry.png?raw=true"><img src="https://github.com/dteck/Mediawiki-Azure-CI/blob/main/Wiki_Container_Registry.png?raw=true" width="400" height="500"></a>

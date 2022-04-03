@@ -1,0 +1,45 @@
+{
+    "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+    "contentVersion": "1.0.0.0",
+    "parameters": {
+        "Container_Registry_Name": {
+            "defaultValue": "mediawiki",
+            "type": "String",
+            "metadata": {
+                "description": "Only alphanumeric characters allowed. Must be globally unique. A unique string will be appended."
+        }
+        },
+        "SKU": {
+            "defaultValue": "Standard",
+            "allowedValues": ["Basic", "Standard", "Premium"],
+            "type": "String",
+            "metadata": {
+                "description": "Sets the storage and I/O limits: https://docs.microsoft.com/en-us/azure/container-registry/container-registry-skus"
+        }
+        }
+    },
+    "variables": {
+        //Helps to create a globally unique name for the registry
+        "CR-Name": "[concat(parameters('Container_Registry_Name'), uniqueString(subscription().id, resourceGroup().id))]"
+    },
+    "resources": [
+        {
+            "type": "Microsoft.ContainerRegistry/registries",
+            "apiVersion": "2021-09-01",
+            "name": "[variables('CR-Name')]",
+            "location": "[resourceGroup().location]",
+            "tags": {},
+            "sku": {
+                "name": "[parameters('SKU')]"
+            },
+            "properties": {
+                "adminUserEnabled": true,
+                "dataEndpointEnabled": false,
+                "publicNetworkAccess": "Enabled",
+                "networkRuleBypassOptions": "AzureServices",
+                "zoneRedundancy": "Disabled",
+                "anonymousPullEnabled": false
+            }
+        }
+    ]
+}

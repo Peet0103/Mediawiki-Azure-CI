@@ -44,6 +44,7 @@ jobs:
           registryPassword: ${{ secrets.ACANHTEST02_REGISTRY_PASSWORD }}
           containerAppName: aca-nh-test-02
           resourceGroup: rg-nh-test-01
+          containerAppEnvironment: env-nh-testwerkend-01
           imageToBuild: nicecontainerreg.azurecr.io/aca-nh-testwerkend-01:${{ github.sha }}
 
 

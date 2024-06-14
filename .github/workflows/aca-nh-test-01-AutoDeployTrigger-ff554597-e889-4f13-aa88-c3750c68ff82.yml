@@ -40,7 +40,7 @@ jobs:
           registryPassword: ${{ secrets.ACANHTEST01_REGISTRY_PASSWORD }}
           containerAppName: aca-nh-test-01
           resourceGroup: rg-nh-test-01
-          imageToBuild: default/[parameters('containerAppName')]:${{ github.sha }}
+          imageToBuild: default/[parameters('aca-nh-test-01')]:${{ github.sha }}
           _buildArgumentsKey_: |
             _buildArgumentsValues_
 

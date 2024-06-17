@@ -1,5 +1,5 @@
 name: Trigger auto deployment for aca-nh-test-01
-
+#:|
 
 # When this action will be executed
 on:

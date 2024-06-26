@@ -12,3 +12,4 @@ echo EnableMMAP Off >> /etc/apache2/apache2.conf
 ln -sf /var/www/html/LocalSettingsLink/LocalSettings.php /var/www/html/LocalSettings.php
 ln -sf /var/www/html/LocalSettingsLink/wiki.png /var/www/html/wiki.png
 ln -sf /var/www/html/imagesLink /var/www/html/images
+#
